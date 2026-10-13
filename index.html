@@ -159,7 +159,10 @@
             submitScoreBtn.addEventListener("click", () => {
                 const name = playerNameInput.value.trim(); if(!name) return; if (!lootlockerConnected) { resetGame(); return; }
                 isSavingScore = true; submitScoreBtn.disabled = true; submitScoreBtn.innerText = "Speichert...";
-                LootLocker.setPlayerName(name).then(() => { return LootLocker.submitScore(LEADERBOARD_KEY, score); }).then((response) => { isSavingScore = false; submitScoreBtn.disabled = false; submitScoreBtn.innerText = "Absenden"; resetGame(); }).catch(err => { isSavingScore = false; resetGame(); });
+                LootLocker.setPlayerName(name)
+                .then(() => { return LootLocker.submitScore(LEADERBOARD_KEY, score); })
+                .then((response) => { isSavingScore = false; submitScoreBtn.disabled = false; submitScoreBtn.innerText = "Absenden"; resetGame(); })
+                .catch(err => { isSavingScore = false; resetGame(); });
             });
 
             // GAME LOOP
