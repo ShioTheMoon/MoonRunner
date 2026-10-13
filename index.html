@@ -4,15 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel Astronaut Jump & Leaderboard</title>
+    <!-- Offizielles LootLocker Skript -->
     <script src="https://unpkg.com"></script>
     <style>
-        body { margin: 0; background-color: #0d0d1a; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Courier New', Courier, monospace; color: white; overflow: hidden; }
-        #gameContainer { position: relative; }
-        #gameCanvas { background-color: #080818; border: 4px solid #4d4dff; box-shadow: 0 0 20px #4d4dff; cursor: pointer; }
-        #ui { position: absolute; top: 20px; left: 20px; font-size: 24px; text-shadow: 2px 2px black; z-index: 10; }
-        #highscoreForm { display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(26, 26, 58, 0.95); border: 3px solid #ff4d4d; padding: 20px; text-align: center; box-shadow: 0 0 15px #ff4d4d; z-index: 20; }
-        #highscoreForm input { padding: 8px; font-family: 'Courier New', Courier, monospace; font-size: 16px; border: 2px solid #4d4dff; background: #0d0d1a; color: white; margin-bottom: 10px; text-align: center; }
-        #highscoreForm button { padding: 8px 15px; font-family: 'Courier New', Courier, monospace; background: #4d4dff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        body {
+            margin: 0;
+            background-color: #0d0d1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Courier New', Courier, monospace;
+            color: white;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+        }
+
+        #gameCanvas {
+            background-color: #050510;
+            border: 4px solid #4d4dff;
+            box-shadow: 0 0 20px #4d4dff;
+            cursor: pointer;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            text-shadow: 2px 2px black;
+            z-index: 10;
+        }
+
+        #highscoreForm {
+            display: none;
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 58, 0.95);
+            border: 3px solid #ff4d4d;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 0 15px #ff4d4d;
+            z-index: 20;
+        }
+
+            #highscoreForm input {
+                padding: 8px;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 16px;
+                border: 2px solid #4d4dff;
+                background: #0d0d1a;
+                color: white;
+                margin-bottom: 10px;
+                text-align: center;
+            }
+
+            #highscoreForm button {
+                padding: 8px 15px;
+                font-family: 'Courier New', Courier, monospace;
+                background: #4d4dff;
+                color: white;
+                border: none;
+                cursor: pointer;
+                font-weight: bold;
+            }
     </style>
 </head>
 <body>
@@ -26,178 +86,190 @@
         </div>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
     </div>
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreDisplay = document.getElementById("score");
-    const highscoreForm = document.getElementById("highscoreForm");
-    const playerNameInput = document.getElementById("playerNameInput");
-    const submitScoreBtn = document.getElementById("submitScoreBtn");
+    <script>
+            const canvas = document.getElementById("gameCanvas");
+            const ctx = canvas.getContext("2d");
+            const scoreDisplay = document.getElementById("score");
+            const highscoreForm = document.getElementById("highscoreForm");
+            const playerNameInput = document.getElementById("playerNameInput");
+            const submitScoreBtn = document.getElementById("submitScoreBtn");
 
-    // CONFIGURATION
-    const LOOTLOCKER_API_KEY = "dev_3dfffe9e029f4bf280324e5baaf5016c"; 
-    const LOOTLOCKER_GAME_ID = 107763;                       
-    const LEADERBOARD_KEY = "top_10_scores"; 
+            // ==========================================
+            // DEINE EINSTELLUNGEN
+            // ==========================================
+            const LOOTLOCKER_API_KEY = "dev_3dfffe9e029f4bf280324e5baaf5016c";
+            const LOOTLOCKER_GAME_ID = 107763;
+            const LEADERBOARD_KEY = "top_10_scores";
 
-    // BILDER LADEN
-    const astronautImg = new Image();
-    astronautImg.src = 'ShiPixel.gif'; 
+            // BILDER LADEN
+            const astronautImg = new Image();
+            astronautImg.src = 'ShiPixel.gif';
 
-    const asteroidImg = new Image();
-    asteroidImg.src = 'asteroid.png'; // Für dein späteres Asteroiden-Bild vorbereitet
-    let asteroidLoaded = false;
-    asteroidImg.onload = () => { asteroidLoaded = true; };
+            const asteroidImg = new Image();
+            asteroidImg.src = 'asteroid.png';
+            let asteroidLoaded = false;
+            asteroidImg.onload = () => { asteroidLoaded = true; };
 
-    // SPIEL-VARIABLEN
-    let score = 0;
-    let gameOver = false;
-    let isSavingScore = false;
-    let globalLeaderboard = [];
-    let lootlockerConnected = false;
+            // SPIEL-VARIABLEN
+            let score = 0;
+            let gameOver = false;
+            let isSavingScore = false;
+            let globalLeaderboard = [];
+            let lootlockerConnected = false;
 
-    const player = { x: 50, y: 300, width: 40, height: 50, gravity: 0.6, velocity: 0, jumpStrength: -12, isGrounded: true };
-    let obstacles = [];
-    let spawnTimer = 0;
+            const player = { x: 50, y: 300, width: 40, height: 50, gravity: 0.6, velocity: 0, jumpStrength: -12, isGrounded: true };
+            let obstacles = [];
+            let spawnTimer = 0;
+            let nextSpawnTime = 120;
 
-    // NEU: STERNE FÜR DEN HINTERGRUND
-    let stars = [];
-    for (let i = 0; i < 40; i++) {
-        stars.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * 340, // Nur oberhalb des Bodens
-            size: Math.random() * 2 + 1,
-            speed: Math.random() * 0.5 + 0.2
-        });
-    }
-
-    // LOOTLOCKER INTERACTION
-    if (typeof LootLocker !== 'undefined') {
-        LootLocker.initialize(LOOTLOCKER_API_KEY, "0.0.1", LOOTLOCKER_GAME_ID)
-        .then(() => { return LootLocker.startGuestSession(); })
-        .then((response) => {
-            if(response && response.success) {
-                lootlockerConnected = true;
-                fetchLeaderboard();
+            // STERNE FÜR DEN HINTERGRUND
+            let stars = [];
+            for (let i = 0; i < 40; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * 340,
+                    size: Math.random() * 2 + 1,
+                    speed: Math.random() * 0.5 + 0.2
+                });
             }
-        }).catch(err => console.log("Offline mode."));
-    }
 
-    function fetchLeaderboard() {
-        if (!lootlockerConnected) return;
-        LootLocker.getLeaderboardStructure(LEADERBOARD_KEY, 10)
-        .then((response) => {
-            if(response && response.success && response.items) { globalLeaderboard = response.items; }
-        }).catch(err => console.log(err));
-    }
-
-    // CONTROLS
-    window.addEventListener("keydown", (e) => { 
-        if (highscoreForm.style.display === "block") return;
-        if (e.code === "Space" && !isSavingScore) { e.preventDefault(); handleInput(); }
-    });
-    canvas.addEventListener("mousedown", (e) => {
-        if (highscoreForm.style.display === "block" || isSavingScore) return;
-        handleInput();
-    });
-
-    function handleInput() {
-        if (gameOver) { resetGame(); } 
-        else if (player.isGrounded) { player.velocity = player.jumpStrength; player.isGrounded = false; }
-    }
-
-    function spawnObstacle() {
-        spawnTimer++;
-        if (spawnTimer > 100 + Math.random() * 50) {
-            obstacles.push({ x: canvas.width, y: 320, width: 30, height: 30, speed: 5 + score * 0.1, passed: false });
-            spawnTimer = 0;
-        }
-    }
-
-    function resetGame() {
-        obstacles = []; score = 0; scoreDisplay.textContent = score; player.y = 300; player.velocity = 0; player.isGrounded = true; gameOver = false; highscoreForm.style.display = "none"; playerNameInput.value = "";
-        fetchLeaderboard(); 
-    }
-
-    submitScoreBtn.addEventListener("click", () => {
-        const name = playerNameInput.value.trim();
-        if(!name) return;
-        if (!lootlockerConnected) { resetGame(); return; }
-        isSavingScore = true; submitScoreBtn.disabled = true; submitScoreBtn.innerText = "Speichert...";
-        LootLocker.setPlayerName(name)
-        .then(() => { return LootLocker.submitScore(LEADERBOARD_KEY, score); })
-        .then((response) => { isSavingScore = false; submitScoreBtn.disabled = false; submitScoreBtn.innerText = "Absenden"; resetGame(); })
-        .catch(err => { isSavingScore = false; resetGame(); });
-    });
-
-    // GAME LOOP
-    function loop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // HINTERGRUND-STERNE BEWEGEN & ZEICHNEN
-        ctx.fillStyle = "white";
-        for (let i = 0; i < stars.length; i++) {
-            let star = stars[i];
-            if (!gameOver) {
-                star.x -= star.speed; // Sterne bewegen sich langsam nach links
-                if (star.x < 0) star.x = canvas.width; // Am Ende rechts wieder einspeisen
+            // RETRO SOUND GENERATOR
+            let audioCtx = null;
+            function initAudio() {
+                if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
             }
-            ctx.fillRect(star.x, star.y, star.size, star.size);
-        }
 
-        // Boden-Linie
-        ctx.strokeStyle = "#4d4dff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 350); ctx.lineTo(canvas.width, 350); ctx.stroke();
+            function playJumpSound() {
+                initAudio(); if (!audioCtx) return;
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.type = "square";
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            }
 
-        if (!gameOver) {
-            player.velocity += player.gravity; player.y += player.velocity;
-            if (player.y >= 300) { player.y = 300; player.velocity = 0; player.isGrounded = true; }
-            
-            spawnObstacle();
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i]; obs.x -= obs.speed;
-                
-                // HINDERNIS-LOGIK: Bild nutzen falls da, ansonsten rote Ausweich-Box
-                if (asteroidLoaded) {
-                    ctx.drawImage(asteroidImg, obs.x, obs.y, obs.width, obs.height);
-                } else {
-                    ctx.fillStyle = "#ff4d4d"; ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            function playGameOverSound() {
+                initAudio(); if (!audioCtx) return;
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.type = "sawtooth";
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.4);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            }
+
+            // LOOTLOCKER VERBINDUNG
+            if (typeof LootLocker !== 'undefined') {
+                LootLocker.initialize(LOOTLOCKER_API_KEY, "0.0.1", LOOTLOCKER_GAME_ID)
+                .then(() => { return LootLocker.startGuestSession(); })
+                .then((response) => {
+                    if(response && response.success) { lootlockerConnected = true; fetchLeaderboard(); }
+                }).catch(err => console.log("Offline mode."));
+            }
+
+            function fetchLeaderboard() {
+                if (!lootlockerConnected) return;
+                LootLocker.getLeaderboardStructure(LEADERBOARD_KEY, 10)
+                .then((response) => {
+                    if(response && response.success && response.items) { globalLeaderboard = response.items; }
+                }).catch(err => console.log(err));
+            }
+
+            // STEUERUNG
+            window.addEventListener("keydown", (e) => {
+                if (highscoreForm.style.display === "block") return;
+                if (e.code === "Space" && !isSavingScore) { e.preventDefault(); handleInput(); }
+            });
+            canvas.addEventListener("mousedown", (e) => {
+                if (highscoreForm.style.display === "block" || isSavingScore) return;
+                handleInput();
+            });
+
+            function handleInput() {
+                if (gameOver) { resetGame(); }
+                else if (player.isGrounded) { player.velocity = player.jumpStrength; player.isGrounded = false; playJumpSound(); }
+            }
+
+            function spawnObstacle() {
+                spawnTimer++;
+                if (spawnTimer > nextSpawnTime) {
+                    let currentSpeed = 5.5 + score * 0.25;
+                    if (currentSpeed > 12) currentSpeed = 12;
+                    obstacles.push({ x: canvas.width, y: 320, width: 30, height: 30, speed: currentSpeed, passed: false });
+                    let minGap = Math.max(60, 100 - score * 2);
+                    nextSpawnTime = minGap + Math.random() * 80;
+                    spawnTimer = 0;
                 }
-                
-                if (player.x < obs.x + obs.width && player.x + player.width > obs.x && player.y < obs.y + obs.height && player.y + player.height > obs.y) {
-                    gameOver = true;
-                    if (score > -1 && lootlockerConnected) { 
-                        highscoreForm.style.display = "block"; 
-                        setTimeout(() => { playerNameInput.focus(); }, 50); 
-                    }
+            }
+
+            function resetGame() {
+                obstacles = []; score = 0; scoreDisplay.textContent = score; player.y = 300; player.velocity = 0; player.isGrounded = true; gameOver = false; highscoreForm.style.display = "none"; playerNameInput.value = "";
+                nextSpawnTime = 120; fetchLeaderboard();
+            }
+
+            submitScoreBtn.addEventListener("click", () => {
+                const name = playerNameInput.value.trim();
+                if(!name) return;
+                if (!lootlockerConnected) { resetGame(); return; }
+                isSavingScore = true; submitScoreBtn.disabled = true; submitScoreBtn.innerText = "Speichert...";
+                LootLocker.setPlayerName(name)
+                .then(() => { return LootLocker.submitScore(LEADERBOARD_KEY, score); })
+                .then((response) => { isSavingScore = false; submitScoreBtn.disabled = false; submitScoreBtn.innerText = "Absenden"; resetGame(); })
+                .catch(err => { isSavingScore = false; resetGame(); });
+            });
+
+            // GAME LOOP
+            function loop() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 1. PIXEL-MOND ZEICHNEN
+                ctx.fillStyle = "#e0e0e0";
+                ctx.beginPath();
+                ctx.arc(680, 80, 45, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#b8b8b8";
+                ctx.fillRect(660, 60, 12, 8);
+                ctx.fillRect(690, 90, 16, 12);
+                ctx.fillRect(655, 95, 8, 8);
+
+                // Sterne im Hintergrund bewegen & zeichnen
+                ctx.fillStyle = "white";
+                for (let i = 0; i < stars.length; i++) {
+                    let star = stars[i];
+                    if (!gameOver) { star.x -= star.speed; if (star.x < 0) star.x = canvas.width; }
+                    ctx.fillRect(star.x, star.y, star.size, star.size);
                 }
-                
-                if (obs.x + obs.width < player.x && !obs.passed) { score++; scoreDisplay.textContent = score; obs.passed = true; }
-                if (obs.x + obs.width < 0) { obstacles.splice(i, 1); }
-            }
-        }
 
-        ctx.drawImage(astronautImg, player.x, player.y, player.width, player.height);
+                // 2. SATURN-RING-BODEN ZEICHNEN
+                ctx.fillStyle = "#e2bf7d";
+                ctx.fillRect(0, 350, canvas.width, 50);
+                ctx.fillStyle = "#f5e1b3";
+                ctx.fillRect(0, 350, canvas.width, 4);
+                ctx.fillStyle = "#b08d49";
+                ctx.fillRect(0, 362, canvas.width, 6);
+                ctx.fillRect(0, 376, canvas.width, 3);
+                ctx.fillStyle = "#8a6627";
+                ctx.fillRect(0, 385, canvas.width, 5);
 
-        if (gameOver) {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.75)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "white"; ctx.font = "22px 'Courier New'"; ctx.fillText("GAME OVER", 340, 50);
-            ctx.fillStyle = "#4d4dff"; ctx.fillText("=== WELTWEITE TOP 10 ===", 250, 100);
-            ctx.fillStyle = "white"; ctx.font = "16px 'Courier New'";
-            
-            if(globalLeaderboard.length === 0) { ctx.fillText("Noch keine Einträge vorhanden oder offline.", 220, 140); }
-            for(let i = 0; i < globalLeaderboard.length; i++) {
-                let entry = globalLeaderboard[i];
-                let pName = (entry.player && entry.player.name) ? entry.player.name : "Anonymer Astronaut";
-                ctx.fillText(`${i + 1}. ${pName}: ${entry.score} Pkt`, 280, 140 + (i * 22));
-            }
-            if(!isSavingScore && highscoreForm.style.display !== "block") {
-                ctx.fillStyle = "#ff4d4d"; ctx.font = "16px 'Courier New'"; ctx.fillText("Klicke oder drücke Leertaste zum Neustarten", 190, 380);
-            }
-        }
+                if (!gameOver) {
+                    player.velocity += player.gravity; player.y += player.velocity;
+                    if (player.y >= 300) { player.y = 300; player.velocity = 0; player.isGrounded = true; }
 
-        requestAnimationFrame(loop);
-    }
+                    spawnObstacle();
+                    for (let i = obstacles.length - 1; i >= 0; i--) {
+                        let obs = obstacles[i]; obs.x -= obs.speed;
 
-    loop();
-</script>
-</body>
-</html>
+                        if (asteroidLoaded) {
+                            ctx.drawImage(asteroidImg, obs.x, obs.y, obs.width, obs.height);
+                        } else {
+                            ctx.fillStyle = "#ff4d4d"; ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                        }
+
+                        if (player.x < obs.x + obs.width && player.x + player.width > obs.x && player.y < obs.y + obs.height && player.y + player.height > obs.y) {
+                            gameOver = true; playGameOverSound();
+                            if (score > -1 && lootlockerConnected) { highscoreForm.style.display = "block"; setTimeout(() => { playerNameInput.focus(); }, 50); }
