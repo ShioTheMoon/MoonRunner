@@ -11,7 +11,7 @@
         #gameContainer { position: relative; }
         #gameCanvas { background-color: #1a1a3a; border: 4px solid #4d4dff; box-shadow: 0 0 20px #4d4dff; cursor: pointer; }
         #ui { position: absolute; top: 20px; left: 20px; font-size: 24px; text-shadow: 2px 2px black; z-index: 10; }
-        #highscoreForm { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(26, 26, 58, 0.95); border: 3px solid #ff4d4d; padding: 20px; text-align: center; box-shadow: 0 0 15px #ff4d4d; z-index: 20; }
+        #highscoreForm { display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(26, 26, 58, 0.95); border: 3px solid #ff4d4d; padding: 20px; text-align: center; box-shadow: 0 0 15px #ff4d4d; z-index: 20; }
         #highscoreForm input { padding: 8px; font-family: 'Courier New', Courier, monospace; font-size: 16px; border: 2px solid #4d4dff; background: #0d0d1a; color: white; margin-bottom: 10px; text-align: center; }
         #highscoreForm button { padding: 8px 15px; font-family: 'Courier New', Courier, monospace; background: #4d4dff; color: white; border: none; cursor: pointer; font-weight: bold; }
     </style>
@@ -22,8 +22,9 @@
         <div id="highscoreForm">
             <h3>NEUER HIGHSCORE!</h3>
             <p>Trage deinen Twitch-Namen ein:</p>
-            <input type="text" id="playerNameInput" maxlength="15" placeholder="Dein Name"><br>
-            <button id="submitScoreBtn">Absenden</button>
+            <!-- stopPropagation verhindert, dass Klicks ins Textfeld das Spiel neustarten -->
+            <input type="text" id="playerNameInput" maxlength="15" placeholder="Dein Name" onmousedown="event.stopPropagation();"><br>
+            <button id="submitScoreBtn" onmousedown="event.stopPropagation();">Absenden</button>
         </div>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
     </div>
@@ -38,8 +39,8 @@
     // ==========================================
     // DEINE EINSTELLUNGEN
     // ==========================================
-    const LOOTLOCKER_API_KEY = "dev_3dfffe9e029f4bf280324e5baaf5016c"; // MUSS in Anführungszeichen!
-    const LOOTLOCKER_GAME_ID = 107763;                       // DARF NICHT in Anführungszeichen!
+    const LOOTLOCKER_API_KEY = "dev_3dfffe9e029f4bf280324e5baaf5016c"; 
+    const LOOTLOCKER_GAME_ID = 107763;                       
     const LEADERBOARD_KEY = "top_10_scores"; 
 
     const astronautImg = new Image();
@@ -55,7 +56,6 @@
     let obstacles = [];
     let spawnTimer = 0;
 
-    // VERBINDUNG IM HINTERGRUND INITIALISIEREN
     if (typeof LootLocker !== 'undefined') {
         LootLocker.initialize(LOOTLOCKER_API_KEY, "0.0.1", LOOTLOCKER_GAME_ID)
         .then(() => { return LootLocker.startGuestSession(); })
@@ -76,15 +76,21 @@
         }).catch(err => console.log("Fehler beim Laden der Bestenliste."));
     }
 
-    // STEUERUNG (Absolut getrennt von Netzwerkfehlern)
+    // STEUERUNG
     window.addEventListener("keydown", (e) => { 
+        // Wenn das Formular offen ist, darf die Leertaste nicht das Spiel neustarten oder Leerzeichen tippen blockieren
+        if (highscoreForm.style.display === "block") return;
+
         if (e.code === "Space" && !isSavingScore) {
             e.preventDefault();
             handleInput();
         }
     });
+
     canvas.addEventListener("mousedown", (e) => {
-        if (!isSavingScore) handleInput();
+        // Wenn das Formular offen ist, ignorieren wir Klicks auf das Spielfeld komplett
+        if (highscoreForm.style.display === "block" || isSavingScore) return;
+        handleInput();
     });
 
     function handleInput() {
@@ -113,6 +119,7 @@
         player.isGrounded = true; 
         gameOver = false; 
         highscoreForm.style.display = "none";
+        playerNameInput.value = ""; // Textfeld leeren
         fetchLeaderboard(); 
     }
 
@@ -132,7 +139,7 @@
         .catch(err => { isSavingScore = false; resetGame(); });
     });
 
-    // DAUERHAFT LAUFENDE SPIELSCHLEIFE
+    // SPIELSCHLEIFE
     function loop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
@@ -153,7 +160,7 @@
                     gameOver = true;
                     if (score > 0 && lootlockerConnected) { 
                         highscoreForm.style.display = "block"; 
-                        playerNameInput.focus(); 
+                        setTimeout(() => { playerNameInput.focus(); }, 50); // Kleiner Timeout für sauberen Fokus
                     }
                 }
                 
