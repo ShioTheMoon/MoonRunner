@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel Astronaut Jump & Leaderboard</title>
-    <!-- Offizielles LootLocker Skript -->
     <script src="https://unpkg.com"></script>
     <style>
         body { margin: 0; background-color: #0d0d1a; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Courier New', Courier, monospace; color: white; overflow: hidden; }
         #gameContainer { position: relative; }
-        #gameCanvas { background-color: #1a1a3a; border: 4px solid #4d4dff; box-shadow: 0 0 20px #4d4dff; cursor: pointer; }
+        #gameCanvas { background-color: #080818; border: 4px solid #4d4dff; box-shadow: 0 0 20px #4d4dff; cursor: pointer; }
         #ui { position: absolute; top: 20px; left: 20px; font-size: 24px; text-shadow: 2px 2px black; z-index: 10; }
         #highscoreForm { display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(26, 26, 58, 0.95); border: 3px solid #ff4d4d; padding: 20px; text-align: center; box-shadow: 0 0 15px #ff4d4d; z-index: 20; }
         #highscoreForm input { padding: 8px; font-family: 'Courier New', Courier, monospace; font-size: 16px; border: 2px solid #4d4dff; background: #0d0d1a; color: white; margin-bottom: 10px; text-align: center; }
@@ -22,7 +21,6 @@
         <div id="highscoreForm">
             <h3>NEUER HIGHSCORE!</h3>
             <p>Trage deinen Twitch-Namen ein:</p>
-            <!-- stopPropagation verhindert, dass Klicks ins Textfeld das Spiel neustarten -->
             <input type="text" id="playerNameInput" maxlength="15" placeholder="Dein Name" onmousedown="event.stopPropagation();"><br>
             <button id="submitScoreBtn" onmousedown="event.stopPropagation();">Absenden</button>
         </div>
@@ -36,16 +34,21 @@
     const playerNameInput = document.getElementById("playerNameInput");
     const submitScoreBtn = document.getElementById("submitScoreBtn");
 
-    // ==========================================
-    // DEINE EINSTELLUNGEN
-    // ==========================================
+    // CONFIGURATION
     const LOOTLOCKER_API_KEY = "dev_3dfffe9e029f4bf280324e5baaf5016c"; 
     const LOOTLOCKER_GAME_ID = 107763;                       
     const LEADERBOARD_KEY = "top_10_scores"; 
 
+    // BILDER LADEN
     const astronautImg = new Image();
     astronautImg.src = 'ShiPixel.gif'; 
 
+    const asteroidImg = new Image();
+    asteroidImg.src = 'asteroid.png'; // Für dein späteres Asteroiden-Bild vorbereitet
+    let asteroidLoaded = false;
+    asteroidImg.onload = () => { asteroidLoaded = true; };
+
+    // SPIEL-VARIABLEN
     let score = 0;
     let gameOver = false;
     let isSavingScore = false;
@@ -56,16 +59,27 @@
     let obstacles = [];
     let spawnTimer = 0;
 
+    // NEU: STERNE FÜR DEN HINTERGRUND
+    let stars = [];
+    for (let i = 0; i < 40; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * 340, // Nur oberhalb des Bodens
+            size: Math.random() * 2 + 1,
+            speed: Math.random() * 0.5 + 0.2
+        });
+    }
+
+    // LOOTLOCKER INTERACTION
     if (typeof LootLocker !== 'undefined') {
         LootLocker.initialize(LOOTLOCKER_API_KEY, "0.0.1", LOOTLOCKER_GAME_ID)
         .then(() => { return LootLocker.startGuestSession(); })
         .then((response) => {
             if(response && response.success) {
                 lootlockerConnected = true;
-                console.log("LootLocker erfolgreich verbunden!");
                 fetchLeaderboard();
             }
-        }).catch(err => console.log("LootLocker blockiert. Offline-Modus aktiv."));
+        }).catch(err => console.log("Offline mode."));
     }
 
     function fetchLeaderboard() {
@@ -73,33 +87,22 @@
         LootLocker.getLeaderboardStructure(LEADERBOARD_KEY, 10)
         .then((response) => {
             if(response && response.success && response.items) { globalLeaderboard = response.items; }
-        }).catch(err => console.log("Fehler beim Laden der Bestenliste."));
+        }).catch(err => console.log(err));
     }
 
-    // STEUERUNG
+    // CONTROLS
     window.addEventListener("keydown", (e) => { 
-        // Wenn das Formular offen ist, darf die Leertaste nicht das Spiel neustarten oder Leerzeichen tippen blockieren
         if (highscoreForm.style.display === "block") return;
-
-        if (e.code === "Space" && !isSavingScore) {
-            e.preventDefault();
-            handleInput();
-        }
+        if (e.code === "Space" && !isSavingScore) { e.preventDefault(); handleInput(); }
     });
-
     canvas.addEventListener("mousedown", (e) => {
-        // Wenn das Formular offen ist, ignorieren wir Klicks auf das Spielfeld komplett
         if (highscoreForm.style.display === "block" || isSavingScore) return;
         handleInput();
     });
 
     function handleInput() {
-        if (gameOver) {
-            resetGame();
-        } else if (player.isGrounded) {
-            player.velocity = player.jumpStrength;
-            player.isGrounded = false;
-        }
+        if (gameOver) { resetGame(); } 
+        else if (player.isGrounded) { player.velocity = player.jumpStrength; player.isGrounded = false; }
     }
 
     function spawnObstacle() {
@@ -111,38 +114,36 @@
     }
 
     function resetGame() {
-        obstacles = []; 
-        score = 0; 
-        scoreDisplay.textContent = score; 
-        player.y = 300; 
-        player.velocity = 0; 
-        player.isGrounded = true; 
-        gameOver = false; 
-        highscoreForm.style.display = "none";
-        playerNameInput.value = ""; // Textfeld leeren
+        obstacles = []; score = 0; scoreDisplay.textContent = score; player.y = 300; player.velocity = 0; player.isGrounded = true; gameOver = false; highscoreForm.style.display = "none"; playerNameInput.value = "";
         fetchLeaderboard(); 
     }
 
     submitScoreBtn.addEventListener("click", () => {
         const name = playerNameInput.value.trim();
         if(!name) return;
-        
         if (!lootlockerConnected) { resetGame(); return; }
-        
-        isSavingScore = true; 
-        submitScoreBtn.disabled = true; 
-        submitScoreBtn.innerText = "Speichert...";
-        
+        isSavingScore = true; submitScoreBtn.disabled = true; submitScoreBtn.innerText = "Speichert...";
         LootLocker.setPlayerName(name)
         .then(() => { return LootLocker.submitScore(LEADERBOARD_KEY, score); })
         .then((response) => { isSavingScore = false; submitScoreBtn.disabled = false; submitScoreBtn.innerText = "Absenden"; resetGame(); })
         .catch(err => { isSavingScore = false; resetGame(); });
     });
 
-    // SPIELSCHLEIFE
+    // GAME LOOP
     function loop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
+        // HINTERGRUND-STERNE BEWEGEN & ZEICHNEN
+        ctx.fillStyle = "white";
+        for (let i = 0; i < stars.length; i++) {
+            let star = stars[i];
+            if (!gameOver) {
+                star.x -= star.speed; // Sterne bewegen sich langsam nach links
+                if (star.x < 0) star.x = canvas.width; // Am Ende rechts wieder einspeisen
+            }
+            ctx.fillRect(star.x, star.y, star.size, star.size);
+        }
+
         // Boden-Linie
         ctx.strokeStyle = "#4d4dff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 350); ctx.lineTo(canvas.width, 350); ctx.stroke();
 
@@ -154,13 +155,18 @@
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 let obs = obstacles[i]; obs.x -= obs.speed;
                 
-                ctx.fillStyle = "#ff4d4d"; ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                // HINDERNIS-LOGIK: Bild nutzen falls da, ansonsten rote Ausweich-Box
+                if (asteroidLoaded) {
+                    ctx.drawImage(asteroidImg, obs.x, obs.y, obs.width, obs.height);
+                } else {
+                    ctx.fillStyle = "#ff4d4d"; ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                }
                 
                 if (player.x < obs.x + obs.width && player.x + player.width > obs.x && player.y < obs.y + obs.height && player.y + player.height > obs.y) {
                     gameOver = true;
-                    if (score > 0 && lootlockerConnected) { 
+                    if (score > -1 && lootlockerConnected) { 
                         highscoreForm.style.display = "block"; 
-                        setTimeout(() => { playerNameInput.focus(); }, 50); // Kleiner Timeout für sauberen Fokus
+                        setTimeout(() => { playerNameInput.focus(); }, 50); 
                     }
                 }
                 
