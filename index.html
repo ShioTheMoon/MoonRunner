@@ -100,17 +100,15 @@
             const LOOTLOCKER_GAME_ID = 107763;
             const LEADERBOARD_KEY = "top_10_scores";
 
-            // ==========================================
-            // BILDER-PREFÄRENZ (Zuerst laden!)
-            // ==========================================
+            // BILDER-PRÄFERENZ
             const bgImg = new Image();
-            bgImg.src = 'ShioBackground.png'; // Dein absolutes Wunsch-Hintergrundbild
+            bgImg.src = 'ShioBackground.png';
 
             const astronautImg = new Image();
             astronautImg.src = 'ShiPixel.gif';
 
             const asteroidImg = new Image();
-            asteroidImg.src = 'asteroid.png'; // Für dein späteres Asteroiden-Bild vorbereitet
+            asteroidImg.src = 'asteroid.png';
 
             let bgLoaded = false; bgImg.onload = () => { bgLoaded = true; checkAllAssets(); };
             let astronautLoaded = false; astronautImg.onload = () => { astronautLoaded = true; checkAllAssets(); };
@@ -128,7 +126,7 @@
             function playJumpSound() { initAudio(); if (!audioCtx) return; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.type = "square"; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.15); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
             function playGameOverSound() { initAudio(); if (!audioCtx) return; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.type = "sawtooth"; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.4); gain.gain.setValueAtTime(0.15, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
 
-            // LOOTLOCKER INTERACTION
+            // LOOTLOCKER
             if (typeof LootLocker !== 'undefined') {
                 LootLocker.initialize(LOOTLOCKER_API_KEY, "0.0.1", LOOTLOCKER_GAME_ID)
                 .then(() => { return LootLocker.startGuestSession(); })
@@ -164,11 +162,11 @@
                 LootLocker.setPlayerName(name).then(() => { return LootLocker.submitScore(LEADERBOARD_KEY, score); }).then((response) => { isSavingScore = false; submitScoreBtn.disabled = false; submitScoreBtn.innerText = "Absenden"; resetGame(); }).catch(err => { isSavingScore = false; resetGame(); });
             });
 
-            // Hauptschleife (wird erst gestartet wenn die wichtigsten Bilder da sind)
+            // GAME LOOP
             function loop() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // UNENDLICHER GRAPHIK-HINTERGRUND (Scrollt flüssig nach links)
+                // UNENDLICHER GRAPHIK-HINTERGRUND
                 if (bgLoaded) {
                     if (!gameOver) bgScrollX -= 4;
                     if (bgScrollX <= -canvas.width) bgScrollX = 0;
@@ -201,7 +199,7 @@
                     }
                 }
 
-                // Zeichne Astronauten-GIF
+                // Astronauten-GIF zeichnen
                 if (astronautLoaded) {
                     ctx.drawImage(astronautImg, player.x, player.y, player.width, player.height);
                 }
@@ -211,17 +209,16 @@
                     ctx.fillStyle = "white"; ctx.font = "22px 'Courier New'"; ctx.fillText("GAME OVER", 340, 50);
                     ctx.fillStyle = "#4d4dff"; ctx.fillText("=== WELTWEITE TOP 10 ===", 250, 100);
                     ctx.fillStyle = "white"; ctx.font = "16px 'Courier New'";
-if(globalLeaderboard.length === 0) { ctx.fillText("Noch keine Einträge vorhanden oder offline.", 220, 140); }
-for(let i = 0; i < globalLeaderboard.length; i++) {
-let entry = globalLeaderboard[i]; let pName = (entry.player && entry.player.name) ? entry.player.name : "Anonymer Astronaut"; ctx.fillText(${i + 1}. ${pName}: ${entry.score} Pkt, 280, 140 + (i * 22));
+                    if(globalLeaderboard.length === 0) { ctx.fillText("Noch keine Einträge vorhanden oder offline.", 220, 140); }
+                    for(let i = 0; i < globalLeaderboard.length; i++) {let entry = globalLeaderboard[i]; let pName = (entry.player && entry.player.name) ? entry.player.name : "Anonymer Astronaut"; ctx.fillText(${i + 1}. ${pName}: ${entry.score} Pkt, 280, 140 + (i * 22));
 }
 if(!isSavingScore && highscoreForm.style.display !== "block") { ctx.fillStyle = "#ff4d4d"; ctx.font = "16px 'Courier New'"; ctx.fillText("Klicke oder drücke Leertaste zum Neustarten", 190, 380); }
 }
 requestAnimationFrame(loop);
 }
-// Sicherheitsprüfung: Startet das Spiel erst, wenn alles geladen ist
 function checkAllAssets() {
 if (bgLoaded && astronautLoaded) {
 loop();
 }
 }
+setTimeout(() => { checkAllAssets(); }, 2000);
